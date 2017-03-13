@@ -1,0 +1,281 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="reveal.js/css/reveal.css">
+        <link rel="stylesheet" href="reveal.js/lib/css/zenburn.css">
+        <link rel="stylesheet" href="reveal.js/css/theme/solarized.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+								<!-- Slide 1 -->
+								<section>
+									<h1>Developing MERN applications w/ Docker</h1>
+									<h2>Presented by: Charlie Leathers</h2>
+								</section>
+								<!-- Slide 2 -->
+								<section>
+									<h1>MERN? M.E.R.N.?</h1>
+									<p class="fragment">Mongo</p>
+									<p class="fragment">Express</p>
+									<p class="fragment">React</p>
+									<p class="fragment">Node</p>
+								</section>
+								<!-- Slide 3 -->
+								<section>
+									<h1>Want to follow along?</h1>
+									<h2>Clone this repo and checkout the `start` tag</h2>
+									<pre><code class="bash" data-trim data-noescape>
+$ git clone git@github.com:cleathers/MERN_DOCKER.git
+$ git checkout start
+									</pre></code>
+
+								</section>
+								<!-- Slide 4 -->
+								<section>
+									<h2>Let's build an image and create our Express app</h2>
+									<pre><code class="bash" data-trim data-noescape>
+$ docker build -t node-express-webpack .
+$ docker run -it -v $(pwd):/var/www \
+	node-express-webpack express .
+$ docker run -it -v $(pwd):/var/www node-express-webpack npm i
+									</pre></code>
+									<p class="fragment">Here, we're creating a Docker image which has node, express and webpack installed. We then generate an Express app and install it's dependencies.</p>
+									<p class="fragment">In our `Dockerfile` we've set our WORKDIR to `/var/www`. That's why we're mounting the volume to that directory with the `-v` option.</p>
+								</section>
+								<!-- Slide 5 -->
+								<section>
+									<h2>Run it!</h2>
+									<pre><code class="bash" data-trim data-noescape>
+$ docker run -it -p 3000:3000 -v $(pwd):/var/www \
+	node-express-webpack node ./bin/www
+									</pre></code>
+									<p class="fragment">You should now be able to see a bare bones express app at `localhost:3000`. Using the `-p` option we can change the port mapping from the container to the host machine. So if we did `-p 8080:3000` instead of the option used above, we could visit the app at `localhost:8080`.</p>
+									<p class="fragment">Debug mode works as normal as long as you provide the `-it` options</p>
+									<pre class="fragment"><code class="bash" data-trim data-noescape>
+$ docker run -it -p 3000:3000 -v $(pwd):/var/www \
+	node-express-webpack node debug ./bin/www
+									</pre></code>
+								</section>
+								<!-- Slide 6 -->
+								<section>
+									<h1>Mongo</h1>
+
+									<pre class="fragment"><code class="bash" data-trim data-noescape>
+$ docker run --name mongod -d mongo
+									</pre></code>
+									<p class="fragment">This is all you need to do to get a MongoDB instance running on your machine. The `-d` option daemonizes the container. We'll reference the `--name` option when we link this container to our node-express-webpack container.</p>
+								</section>
+								<!-- Slide 7 -->
+								<section>
+									<h2>Express and Mongo</h2>
+									<pre><code class="bash" data-trim data-noescape>
+$ git checkout mongo_setup
+$ docker run -it -v $(pwd):/var/www node-express-webpack npm i
+$ docker run -it --link mongod:mongod \
+	-p 3000:3000 \
+	-v $(pwd):/var/www \
+	-e MONGOD_HOST=mongod \
+	node-express-webpack node ./bin/www
+									</pre></code>
+									<p>If you're following along, make sure to install the new dependencies</p>
+									<p class="fragment">The `--link mongod:mongod` option exposes the MongoDB container to our Express container under the hostname `mongod`.</p>
+
+								</section>
+								<!-- Slide 8 -->
+								<section>
+									<h2>Mongoose</h2>
+									<p class="fragment">Mongoose is an ODM(Object Document Mapper) for MongoDB. It makes things like validation a breeze. We can define a model in just a few lines of code</p>
+									<pre class="fragment"><code class="javascript" data-trim data-noescape>
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+
+var todoSchema = new Schema({
+	title: {
+		type: String,
+		required: true,
+	},
+	completed: {
+		type: Boolean,
+		default: false
+	}
+});
+
+var Todo = mongoose.model('Todo', todoSchema);
+
+module.exports = Todo;
+									</pre></code>
+								</section>
+								<!-- Slide 9 -->
+								<section>
+									<h2>Mongoose (cont.)</h2>
+									<p class="fragment">Using the model is as simple as requiring the model file, creating a new Todo and saving it. The POST /todos route is defined like this</p>
+									<pre class="fragment"><code class="javascript" data-trim data-noescape>
+router.post('/', function(req, res) {
+	var title = req.body.title || false;
+
+	if (!title) {
+			return res.status(500).json({error: true});
+	}
+
+	var newTodo = new Todo({
+		title: title
+	});
+
+	newTodo.save()
+		.then(function(todo) {
+			res.json({id: todo.id});
+		})
+		.catch(function(err) {
+			res.status(500).json({error: true});
+		});
+});
+									</pre></code>
+								</section>
+								<!-- Slide 10 -->
+								<section>
+									<h2>Test our connection</h2>
+									<p>I've setup two routes for us to test the connection using `curl`.</p>
+									<pre class="fragment"><code class="bash" data-trim data-noescape>
+$ curl -H "Content-Type: application/json" -X POST \
+	-d '{"title":"groceries"}' http://localhost:3000/todos
+$ curl -H "Content-Type: application/json" -X POST \
+	-d '{"title":"laundry"}' http://localhost:3000/todos
+$ curl http://localhost:3000/todos
+									</pre></code>
+									<ul class="fragment">
+										<li>I'd also suggest downloading RoboMongo for a Workbench Style MongoDB Client.</li>
+										<li><a href="https://robomongo.org/">https://robomongo.org/</a></li>
+									</ul>
+								</section>
+
+								<!-- Slide 11 -->
+								<section>
+									<h2>Install Webpack</h2>
+									<p>If you're following along make sure to install the new dependencies.</p>
+									<pre class="fragment"><code class="bash" data-trim data-noescape>
+$ git checkout react_app
+$ docker run -it -v $(pwd):/var/www node-express-webpack npm i
+									</pre></code>
+								</section>
+
+								<!-- Slide 12 -->
+								<section>
+									<h2>webpack.config.js</h2>
+									<pre class="fragment"><code class="javascript" data-trim data-noescape>
+module.exports = {
+	entry: './src/js/app.jsx',
+	output: {
+		filename: 'public/js/bundle.js'
+	},
+	module: {
+		loaders: [{
+			test: /\.jsx?$/,
+			loader: 'babel-loader',
+			query: {
+				presets: ['react', 'latest']
+			}
+		}]
+	}
+};
+
+									</pre></code>
+								</section>
+
+								<!-- Slide 13 -->
+								<section>
+									<h2>webpack.config.js (cont.)</h2>
+									<ul>
+										<li>`entry`: defines the starting point of our React app</li>
+										<li>`output`: defines where we want the bundle to be placed</li>
+										<li>The `babel-loader` can be configured to handle different types of code. For this application we'll want the `react` preset for `jsx` goodness and the `latest` preset for ES6.</li>
+									</ul>
+								</section>
+
+								<!-- Slide 14 -->
+								<section>
+									<h2>Bundling</h2>
+									<p>Bundle the code with the first command. The second command will run the app again. Visiting `localhost:3000` should look like the image below.</p>
+									<pre><code class="bash" data-trim data-noescape>
+$ docker run -v $(pwd):/var/www \
+	node-express-webpack webpack .
+$ docker run -it --link mongod:mongod -p 3000:3000 \
+	-v $(pwd):/var/www -e MONGOD_HOST=mongod \
+	node-express-webpack node ./bin/www
+									</pre></code>
+									<img src="img/todo_list.png" alt="todo list screenshot"/>
+								</section>
+
+								<!-- Slide 15 -->
+								<section>
+									<h2>React.js</h2>
+									<p>We initialize our React application within `src/js/app.jsx` by attaching our Todo Component to the `#app` element.</p>
+									<pre><code class="jsx" data-trim data-noescape>
+import React from 'react'
+import ReactDOM from 'react-dom'
+import TodoList from './containers/TodoList.jsx'
+
+let entry = &lt;div className='container'&gt;
+	&lt;TodoList /&gt;
+&lt;/div&gt;;
+
+ReactDOM.render(
+	entry,
+	document.getElementById('app')
+);
+
+									</pre></code>
+								</section>
+								<!-- Slide 16 -->
+								<section>
+									<h2>Components, Props and State</h2>
+									<ul>
+										<li>All React Components must have a render function that returns a single JSX element.</li>
+										<li>Props can be thought of as arguments to Components.</li>
+										<li>State is maintained by instances of Components.</li>
+									</ul>
+								</section>
+
+								<!-- Slide 17 -->
+								<section>
+									<h2>Lifecycle Methods</h2>
+									<p>React allows you to hook into a Component when it either recieves new Props or changes its State</p>
+								</section>
+
+								<!-- Slide 18 -->
+								<section>
+									<h2>Flux, Redux and Vue.js</h2>
+									<p>Redux and Vue.js are implementations of Flux which is Facebooks suggested architecture for React applications.</p>
+									<ul class="fragment">
+										<li><a href="http://redux.js.org/">http://redux.js.org/</a></li>
+										<li><a href="https://vuejs.org/">https://vuejs.org/</a></li>
+									</ul>
+								</section>
+
+								<!-- Slide 19 -->
+								<section>
+									<h2>References</h2>
+									<ul class="fragment">
+										<li><a href="http://mongoosejs.com/">http://mongoosejs.com/</a></li>
+										<li><a href="https://docs.docker.com/">https://docs.docker.com/</a></li>
+										<li><a href="https://facebook.github.io/react/">https://facebook.github.io/react/</a></li>
+										<li><a href="https://webpack.github.io/">https://webpack.github.io/</a></li>
+										<li><a href="http://expressjs.com/">http://expressjs.com/</a></li>
+										<li><a href="https://nodejs.org/en/">https://nodejs.org/en/</a></li>
+									</ul>
+								</section>
+            </div>
+        </div>
+				<!-- enables data-markdown hook -->
+        <script src="head.js"></script>
+        <script src="reveal.js/js/reveal.js"></script>
+        <script>
+					Reveal.initialize({
+						slideNumber: 'c/t',
+						dependencies: [
+							// Syntax highlight for <code> elements
+							{ src: 'reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+						]
+					});
+        </script>
+    </body>
+</html>
