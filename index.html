@@ -74,7 +74,7 @@ $ docker run -it -v $(pwd):/var/www node-express-webpack npm i
 $ docker run -it --link mongod:mongod \
 	-p 3000:3000 \
 	-v $(pwd):/var/www \
-	-e MONGOD_HOST=mongod \
+	-e MONGOD_URL=mongod \
 	node-express-webpack node ./bin/www
 									</pre></code>
 									<p>If you're following along, make sure to install the new dependencies</p>
@@ -199,7 +199,7 @@ module.exports = {
 $ docker run -v $(pwd):/var/www \
 	node-express-webpack webpack .
 $ docker run -it --link mongod:mongod -p 3000:3000 \
-	-v $(pwd):/var/www -e MONGOD_HOST=mongod \
+	-v $(pwd):/var/www -e MONGOD_URL=mongod \
 	node-express-webpack node ./bin/www
 									</pre></code>
 									<img src="img/todo_list.png" alt="todo list screenshot"/>
