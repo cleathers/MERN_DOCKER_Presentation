@@ -3,6 +3,13 @@
         <link rel="stylesheet" href="reveal.js/css/reveal.css">
         <link rel="stylesheet" href="reveal.js/lib/css/zenburn.css">
         <link rel="stylesheet" href="reveal.js/css/theme/solarized.css">
+<script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+</script>
     </head>
     <body>
         <div class="reveal">
@@ -197,7 +204,7 @@ module.exports = {
 									<p>Bundle the code with the first command. The second command will run the app again. Visiting `localhost:3000` should look like the image below.</p>
 									<pre><code class="bash" data-trim data-noescape>
 $ docker run -v $(pwd):/var/www \
-	node-express-webpack webpack .
+	node-express-webpack webpack
 $ docker run -it --link mongod:mongod -p 3000:3000 \
 	-v $(pwd):/var/www -e MONGOD_URL=mongod \
 	node-express-webpack node ./bin/www
@@ -270,6 +277,7 @@ ReactDOM.render(
         <script src="reveal.js/js/reveal.js"></script>
         <script>
 					Reveal.initialize({
+						pdfMaxPagesPerSlide: 1,
 						slideNumber: 'c/t',
 						dependencies: [
 							// Syntax highlight for <code> elements
